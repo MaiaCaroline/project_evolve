@@ -3,12 +3,10 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-from limpeza_dados import limpar_dados_completos
 import datetime
 import gc
 import json
 import os
-import requests
 import locale
 
 # Configurar locale para formatação de números em português do Brasil
@@ -19,6 +17,31 @@ except:
         locale.setlocale(locale.LC_ALL, 'Portuguese_Brazil.1252')
     except:
         locale.setlocale(locale.LC_ALL, '')
+
+# Função de limpeza básica inline (substituindo limpeza_dados)
+def limpar_dados_basico(df):
+    """Limpeza básica de dados inline."""
+    try:
+        # Converter tipos para otimizar memória
+        for col in df.select_dtypes(include=['float64']).columns:
+            df[col] = df[col].astype('float32')
+        for col in df.select_dtypes(include=['int64']).columns:
+            df[col] = df[col].astype('int32')
+        for col in df.select_dtypes(include=['object']).columns:
+            if df[col].nunique() < 100:
+                df[col] = df[col].astype('category')
+        
+        # Tratar valores faltantes básicos
+        for col in df.columns:
+            if df[col].isnull().sum() > 0:
+                if pd.api.types.is_numeric_dtype(df[col]):
+                    df[col] = df[col].fillna(df[col].mean())
+                else:
+                    df[col] = df[col].fillna(df[col].mode()[0] if len(df[col].mode()) > 0 else 'MISSING')
+        
+        return df
+    except Exception:
+        return df
 
 # Configuração da página
 st.set_page_config(
@@ -146,7 +169,7 @@ def load_data(nrows=10000):
         else:
             df["cliente_id"] = df.index.astype(str)
         
-        df = limpar_dados_completos(df)
+        df = limpar_dados_basico(df)
         
         # Tratamento para a coluna de valor de contrato
         colunas_valor = ['VL_TOTAL_CONTRATO', 'VALOR_CONTRATO', 'VL_CONTRATO']

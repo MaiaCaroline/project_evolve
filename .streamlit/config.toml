@@ -1,0 +1,21 @@
+[global]
+developmentMode = false
+
+[server]
+runOnSave = true
+maxUploadSize = 200
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+primaryColor = "#2E86C1"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F0F2F6"
+textColor = "#262730"
+font = "sans serif"
+
+[client]
+caching = true
+displayEnabled = true
+showErrorDetails = false 

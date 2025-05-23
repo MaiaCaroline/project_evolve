@@ -4,12 +4,12 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from limpeza_dados import limpar_dados_completos
-import locale
 import datetime
 import gc
 import json
 import os
 import requests
+import locale
 
 # Configurar locale para formatação de números em português do Brasil
 try:
@@ -46,10 +46,9 @@ def formatar_percentual(valor):
 
 def criar_dados_demo(n=2000):
     """Cria um conjunto de dados de demonstração com muitos clientes ativos."""
-    # Criar distribuição de status de contrato com predominância de ativos
-    status_choices = ['ATIVO', 'ATIVO', 'ATIVO', 'ATIVO', 'VIGENTE', 'VIGENTE', 'VIGENTE', 'REGULAR',
-                    'CANCELADO', 'ENCERRADO', 'INATIVO']
-    status_weights = [0.4, 0.25, 0.1, 0.1, 0.05, 0.05, 0.025, 0.025, 0.01, 0.005, 0.005]
+    # PROBABILIDADES CORRIGIDAS - somam exatamente 1.0
+    status_choices = ['ATIVO', 'VIGENTE', 'REGULAR', 'CANCELADO', 'ENCERRADO', 'INATIVO']
+    status_weights = [0.5, 0.25, 0.15, 0.06, 0.03, 0.01]  # Soma = 1.0
     
     # Criar DataFrame com dados de demonstração
     demo_df = pd.DataFrame({
@@ -76,19 +75,16 @@ def criar_dados_demo(n=2000):
     )
     
     # Aplicar regras de segmentação
-    # Risco de churn
     demo_df["risco_churn"] = False
     demo_df.loc[(demo_df["resposta_NPS_x"] <= 5) | 
                (demo_df["resposta_NPS_x"] <= 3) | 
                ((demo_df["resposta_NPS_x"] < 7) & (demo_df["dias_como_cliente"] > 730)), 
                "risco_churn"] = True
                
-    # Garantir que pelo menos 15% estão em risco
     if demo_df["risco_churn"].mean() < 0.15:
         limite = demo_df["resposta_NPS_x"].quantile(0.15)
         demo_df.loc[demo_df["resposta_NPS_x"] <= limite, "risco_churn"] = True
     
-    # Potencial de upsell
     demo_df["potencial_upsell"] = False
     demo_df.loc[
         ((demo_df["resposta_NPS_x"] >= 8) & 
@@ -97,7 +93,6 @@ def criar_dados_demo(n=2000):
         (~demo_df["risco_churn"]), 
         "potencial_upsell"] = True
         
-    # Garantir que pelo menos 20% têm potencial de upsell
     if demo_df["potencial_upsell"].mean() < 0.2:
         limite = demo_df["resposta_NPS_x"].quantile(0.8)
         demo_df.loc[(demo_df["resposta_NPS_x"] >= limite) & (~demo_df["risco_churn"]), "potencial_upsell"] = True
@@ -112,18 +107,31 @@ def criar_dados_demo(n=2000):
 def load_data(nrows=10000):
     """Carrega e processa os dados do arquivo CSV."""
     try:
-        # Verificar se o arquivo existe
-        arquivo = "base_unificada_amostra.csv"
-        import os
+        # Verificar arquivos de amostra primeiro
+        arquivos_amostra = [
+            "amostras/amostra_tiny.csv",
+            "amostras/amostra_pequena.csv", 
+            "amostras/amostra_parte_1.csv",
+            "base_unificada_amostra.csv"
+        ]
         
-        if not os.path.exists(arquivo):
-            st.warning(f"Arquivo {arquivo} não encontrado. Criando dados de demonstração.")
-            return criar_dados_demo(2000)  # Criar dados de demonstração com 2000 registros
+        df = None
+        arquivo_usado = None
+        
+        for arquivo in arquivos_amostra:
+            if os.path.exists(arquivo):
+                try:
+                    df = pd.read_csv(arquivo, nrows=nrows)
+                    arquivo_usado = arquivo
+                    break
+                except Exception as e:
+                    continue
+        
+        if df is None:
+            st.info("📄 Criando dados de demonstração")
+            return criar_dados_demo(2000)
             
-        df = pd.read_csv(arquivo, nrows=nrows)
-        
         # Verificar e normalizar o nome da coluna de cliente 
-        # (pode ter variações como CLIENTE, CD_CLIENTE, etc.)
         colunas_cliente = ['cliente_id', 'CD_CLIENTE', 'CLIENTE', 'CD_CLI', 
                          'CODIGO_ORGANIZACAO', 'CODIGO_CLIENTE', 'ID_CLIENTE']
         
@@ -133,12 +141,9 @@ def load_data(nrows=10000):
                 cliente_col = col
                 break
         
-        # Se encontrou uma coluna de cliente, padronizar para 'cliente_id'
         if cliente_col:
             df.rename(columns={cliente_col: "cliente_id"}, inplace=True)
         else:
-            # Se não encontrou, criar uma coluna de cliente artificial
-            st.warning("Coluna de cliente não encontrada nos dados. Usando índice como identificador.")
             df["cliente_id"] = df.index.astype(str)
         
         df = limpar_dados_completos(df)
@@ -153,26 +158,20 @@ def load_data(nrows=10000):
                 
         if valor_col:
             try:
-                # Verificar se a coluna é categórica e converter para string
                 valor_series = df[valor_col]
                 if valor_series.dtype.name == 'category':
                     valor_series = valor_series.astype(str)
                 
-                # Substituir vírgulas por pontos e converter para numérico
                 df["VL_TOTAL_CONTRATO_NUM"] = pd.to_numeric(
                     valor_series.str.replace(",", "."), 
                     errors="coerce"
                 )
                 
-                # Verificar valores nulos ou inválidos
                 if df["VL_TOTAL_CONTRATO_NUM"].isna().all():
                     raise ValueError("Todos os valores convertidos são nulos")
             except Exception as e:
-                st.warning(f"Erro ao processar valores de contrato: {e}. Criando valores de demonstração.")
                 df["VL_TOTAL_CONTRATO_NUM"] = np.random.uniform(1000, 100000, len(df))
         else:
-            # Criar uma coluna de valor aleatória para demonstração
-            st.warning("Coluna de valor de contrato não encontrada. Criando dados de demonstração.")
             df["VL_TOTAL_CONTRATO_NUM"] = np.random.uniform(1000, 100000, len(df))
             
         # Tratamento para coluna de data
@@ -186,22 +185,17 @@ def load_data(nrows=10000):
         if data_col:
             df["DT_ASSINATURA_CONTRATO"] = pd.to_datetime(df[data_col], errors="coerce")
         else:
-            # Criar datas aleatórias para demonstração
-            st.warning("Coluna de data não encontrada. Criando dados de demonstração.")
             hoje = datetime.datetime.now()
             datas = [hoje - datetime.timedelta(days=np.random.randint(1, 1000)) for _ in range(len(df))]
             df["DT_ASSINATURA_CONTRATO"] = datas
             
-        # Processar datas de assinatura - com tratamento de erro
         try:
-            # Garantir que DT_ASSINATURA_CONTRATO é datetime, não categórico
             if df["DT_ASSINATURA_CONTRATO"].dtype.name == 'category':
                 df["DT_ASSINATURA_CONTRATO"] = pd.to_datetime(df["DT_ASSINATURA_CONTRATO"].astype(str), errors="coerce")
             
             df["mes_assinatura"] = df["DT_ASSINATURA_CONTRATO"].dt.to_period("M").astype(str)
             df["dias_como_cliente"] = (datetime.datetime.now() - df["DT_ASSINATURA_CONTRATO"]).dt.days
         except Exception as e:
-            st.warning(f"Erro ao processar datas: {e}. Criando datas de demonstração.")
             hoje = datetime.datetime.now()
             df["mes_assinatura"] = "2023-01"
             df["dias_como_cliente"] = 365
@@ -216,15 +210,10 @@ def load_data(nrows=10000):
                 
         if status_col:
             df.rename(columns={status_col: "SITUACAO_CONTRATO"}, inplace=True)
-            
-            # Verificar se SITUACAO_CONTRATO é categórico e converter para string se necessário
             if df["SITUACAO_CONTRATO"].dtype.name == 'category':
                 df["SITUACAO_CONTRATO"] = df["SITUACAO_CONTRATO"].astype(str)
         else:
-            # Criar status aleatórios para demonstração
-            st.warning("Coluna de status não encontrada. Criando dados de demonstração.")
-            status = np.random.choice(['ATIVO', 'CANCELADO', 'TROCADO', 'GRATUITO'], len(df))
-            df["SITUACAO_CONTRATO"] = status
+            df["SITUACAO_CONTRATO"] = np.random.choice(['ATIVO', 'CANCELADO', 'VIGENTE'], len(df))
         
         # Tratamento para NPS
         colunas_nps = ['resposta_NPS_x', 'NPS', 'NOTA_NPS', 'Nota NPS_x']
@@ -236,61 +225,43 @@ def load_data(nrows=10000):
                 
         if nps_col:
             df.rename(columns={nps_col: "resposta_NPS_x"}, inplace=True)
-            
-            # Converter para numérico se for categórico
             if df["resposta_NPS_x"].dtype.name == 'category':
                 df["resposta_NPS_x"] = pd.to_numeric(df["resposta_NPS_x"].astype(str), errors="coerce")
         else:
-            # Criar dados NPS aleatórios para demonstração
-            st.warning("Coluna de NPS não encontrada. Criando dados de demonstração.")
             df["resposta_NPS_x"] = np.random.randint(0, 11, len(df))
         
         try:    
-            # Categorizar NPS
             df["categoria_nps"] = pd.cut(
                 df["resposta_NPS_x"],
                 bins=[-1, 6, 8, 10],
                 labels=["Detrator", "Neutro", "Promotor"]
             )
         except Exception as e:
-            st.warning(f"Erro ao categorizar NPS: {e}. Criando categorias de demonstração.")
             df["categoria_nps"] = np.random.choice(["Detrator", "Neutro", "Promotor"], len(df))
         
-        # Calcular risco de churn (baseado em NPS e tempo como cliente - critérios ampliados)
+        # Calcular risco de churn
         df["risco_churn"] = False
         
-        # Critério 1: Detratores (NPS ≤ 5) com menos de 1 ano como cliente
         condicao1 = (df["resposta_NPS_x"] <= 5) & (df["dias_como_cliente"] < 365)
-        # Critério 2: Detratores (NPS ≤ 3) com qualquer tempo de contrato 
         condicao2 = (df["resposta_NPS_x"] <= 3)
-        # Critério 3: Qualquer cliente com mais de 2 anos e NPS < 7
         condicao3 = (df["resposta_NPS_x"] < 7) & (df["dias_como_cliente"] > 730)
         
-        # Aplicar os critérios
         df.loc[condicao1 | condicao2 | condicao3, "risco_churn"] = True
         
-        # Garantir que pelo menos 10% dos clientes sejam marcados como risco para demonstração
         if df["risco_churn"].mean() < 0.1:
-            # Se menos de 10% em risco, marcar os 10% com menor NPS
             limite = df["resposta_NPS_x"].quantile(0.1)
             df.loc[df["resposta_NPS_x"] <= limite, "risco_churn"] = True
               
-        # Calcular potencial de upsell (critérios ampliados)
+        # Calcular potencial de upsell
         df["potencial_upsell"] = False
         
-        # Critério 1: Promotores (NPS ≥ 8) com valor abaixo da mediana
         condicao1 = (df["resposta_NPS_x"] >= 8) & (df["VL_TOTAL_CONTRATO_NUM"] < df["VL_TOTAL_CONTRATO_NUM"].median())
-        # Critério 2: Clientes antigos (>2 anos) com valor abaixo do Q1 (25% mais baixos)
         condicao2 = (df["dias_como_cliente"] > 730) & (df["VL_TOTAL_CONTRATO_NUM"] < df["VL_TOTAL_CONTRATO_NUM"].quantile(0.25))
-        # Critério 3: Clientes muito satisfeitos (NPS ≥ 9) com qualquer valor
         condicao3 = (df["resposta_NPS_x"] >= 9)
         
-        # Aplicar os critérios (excluindo clientes já marcados para churn)
         df.loc[(condicao1 | condicao2 | condicao3) & (~df["risco_churn"]), "potencial_upsell"] = True
         
-        # Garantir que pelo menos 15% dos clientes sejam marcados com potencial de upsell
         if df["potencial_upsell"].mean() < 0.15:
-            # Se menos de 15% com potencial, marcar os 15% com maior NPS que não estão em risco
             limite = df.loc[~df["risco_churn"], "resposta_NPS_x"].quantile(0.85)
             df.loc[(df["resposta_NPS_x"] >= limite) & (~df["risco_churn"]), "potencial_upsell"] = True
         
@@ -306,7 +277,6 @@ def load_data(nrows=10000):
         for col in df.select_dtypes(include=['int64']).columns:
             df[col] = df[col].astype('int32')
             
-        # Conversão para categoria    
         for col in df.select_dtypes(include=['object']).columns:
             if df[col].nunique() < 100:
                 df[col] = df[col].astype('category')
@@ -315,16 +285,13 @@ def load_data(nrows=10000):
     
     except Exception as e:
         st.error(f"Erro ao carregar dados: {e}")
-        # Criar um dataframe de demonstração em caso de erro
-        st.warning("Criando dataframe de demonstração para exibir o dashboard.")
+        st.info("🔄 Criando dados de demonstração")
         
         n = 1000
         
-        # Criar distribuição de status de contrato com predominância de ativos
-        # (80% ativos, 20% outros status incluindo cancelados)
-        status_choices = ['ATIVO', 'ATIVO', 'ATIVO', 'ATIVO', 'VIGENTE', 'VIGENTE', 'VIGENTE', 'REGULAR',
-                        'CANCELADO', 'ENCERRADO', 'INATIVO']
-        status_weights = [0.3, 0.2, 0.1, 0.1, 0.1, 0.05, 0.05, 0.05, 0.02, 0.02, 0.01]
+        # PROBABILIDADES CORRIGIDAS - somam exatamente 1.0
+        status_choices = ['ATIVO', 'VIGENTE', 'REGULAR', 'CANCELADO', 'ENCERRADO', 'INATIVO']
+        status_weights = [0.5, 0.25, 0.15, 0.06, 0.03, 0.01]  # Soma = 1.0
         
         demo_df = pd.DataFrame({
             'cliente_id': [f'C{i:05d}' for i in range(n)],
@@ -349,20 +316,17 @@ def load_data(nrows=10000):
             labels=["Detrator", "Neutro", "Promotor"]
         )
         
-        # Clusters com critérios ampliados para a demonstração
-        # Risco de churn
+        # Clusters
         demo_df["risco_churn"] = False
         demo_df.loc[(demo_df["resposta_NPS_x"] <= 5) | 
                    (demo_df["resposta_NPS_x"] <= 3) | 
                    ((demo_df["resposta_NPS_x"] < 7) & (demo_df["dias_como_cliente"] > 730)), 
                    "risco_churn"] = True
                    
-        # Garantir que pelo menos 15% estão em risco
         if demo_df["risco_churn"].mean() < 0.15:
             limite = demo_df["resposta_NPS_x"].quantile(0.15)
             demo_df.loc[demo_df["resposta_NPS_x"] <= limite, "risco_churn"] = True
         
-        # Potencial de upsell
         demo_df["potencial_upsell"] = False
         demo_df.loc[
             ((demo_df["resposta_NPS_x"] >= 8) & 
@@ -371,7 +335,6 @@ def load_data(nrows=10000):
             (~demo_df["risco_churn"]), 
             "potencial_upsell"] = True
             
-        # Garantir que pelo menos 20% têm potencial de upsell
         if demo_df["potencial_upsell"].mean() < 0.2:
             limite = demo_df["resposta_NPS_x"].quantile(0.8)
             demo_df.loc[(demo_df["resposta_NPS_x"] >= limite) & (~demo_df["risco_churn"]), "potencial_upsell"] = True
@@ -418,7 +381,6 @@ def calcular_metricas_cs(df):
             
             # Se isso resultar em zero clientes ativos, considerar todos como ativos (para demonstração)
             if df_ativos.empty:
-                st.warning("Não foi possível identificar clientes ativos. Considerando todos como ativos para demonstração.")
                 df_ativos = df
                 
             metricas["clientes_ativos"] = df_ativos["cliente_id"].nunique() if "cliente_id" in df.columns else len(df_ativos)

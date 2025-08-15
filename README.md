@@ -13,9 +13,11 @@ Este dashboard está pronto para deploy no Streamlit Cloud. Siga os passos:
 5. **Configure:**
    - **Main file path:** `dashboard_cliente_success.py`
    - **Python version:** 3.9
-6. **Deploy!** 
+6. **Deploy!**
 
-##  Funcionalidades
+
+
+##Funcionalidades
 
 - ** Métricas de Retenção:** Taxa de churn, NPS médio, ticket médio
 - ** Segmentação de Clientes:** Clustering automático por comportamento
@@ -41,15 +43,58 @@ O dashboard aceita arquivos CSV com as seguintes colunas (opcionais):
 ##  Instalação Local
 
 ```bash
-# Clone o repositório
-git clone <seu-repositorio>
-cd dashboard-customer-success
+# No seu terminal, navegue até sua pasta de projetos e clone o repositório:
+git clone https://github.com/<seu-usuario>/customer-success-analytics.git](https://github.com/seu-usuario/project_evolve.git
+
+cd project_evolve
+
+# Criar e Ativar o Ambiente Virtual
+
+Dentro da pasta do projeto, crie o ambiente virtual:
+
+python -m venv .venv
+
+Ative-o:
+
+Windows: .\.venv\Scripts\Activate.ps1
+
+macOS/Linux: source .venv/bin/activate
 
 # Instale as dependências
+Crie o arquivo requirements.txt na raiz do projeto e cole todo o conteúdo que definimos anteriormente.
+
+Instale as bibliotecas:
+
 pip install -r requirements.txt
+
+
+#Criar a Estrutura de Diretórios
+
+Crie as pastas que irão organizar nosso projeto:
+
+mkdir notebooks src data
+
+
+Configurar o .gitignore
+
+Crie o arquivo .gitignore na raiz do projeto.
+
+Cole o conteúdo que definimos, garantindo que dados, modelos, ambientes virtuais e caches sejam ignorados. 
+
+
+Primeiro Commit - A Linha de Base
+
+Agora, vamos salvar esta estrutura inicial no nosso histórico.
+
+git add .
+git commit -m "Initial commit: Configura estrutura do projeto, dependências e gitignore"
+git push origin main
+Checkpoint: Seu repositório no GitHub agora tem a estrutura de pastas, o requirements.txt e o .gitignore.
 
 # Execute o dashboard
 streamlit run dashboard_cliente_success.py
+
+
 ```
 
 # Como Usar

@@ -68,21 +68,21 @@ Instale as bibliotecas:
 pip install -r requirements.txt
 
 
-#Criar a Estrutura de Diretórios
+# Criar a Estrutura de Diretórios
 
 Crie as pastas que irão organizar nosso projeto:
 
 mkdir notebooks src data
 
 
-Configurar o .gitignore
+# Configurar o .gitignore
 
 Crie o arquivo .gitignore na raiz do projeto.
 
 Cole o conteúdo que definimos, garantindo que dados, modelos, ambientes virtuais e caches sejam ignorados. 
 
 
-Primeiro Commit - A Linha de Base
+# Commit 
 
 Agora, vamos salvar esta estrutura inicial no nosso histórico.
 
@@ -93,8 +93,6 @@ Checkpoint: Seu repositório no GitHub agora tem a estrutura de pastas, o requir
 
 # Execute o dashboard
 streamlit run dashboard_cliente_success.py
-
-
 ```
 
 # Como Usar

@@ -1,4 +1,28 @@
-streamlit>=1.28.0
-pandas>=2.0.0
-numpy>=1.25.0
-plotly>=5.15.0 
+
+#Requisitos para o Projeto de Customer Success
+#16 de Agosto de 2025
+
+#Análise e Manipulação de Dados
+pandas==2.2.2
+numpy==1.26.4
+
+#Visualização de Dados e EDA
+matplotlib==3.8.4
+seaborn==0.13.2
+plotly==5.22.0
+
+#Web App / Dashboard Interativo
+streamlit==1.37.0
+
+#Machine Learning e Pré-processamento ---
+scikit-learn==1.5.0
+
+#Persistência de Modelo
+joblib==1.4.2
+
+#Conectividade com Banco de Dados (MS SQL Server)
+sqlalchemy==2.0.30
+pyodbc>=5.1.0
+
+#MLOps e Rastreamento de Experimentos
+mlflow==2.14.1

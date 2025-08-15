@@ -44,7 +44,7 @@ O dashboard aceita arquivos CSV com as seguintes colunas (opcionais):
 
 ```bash
 # No seu terminal, navegue até sua pasta de projetos e clone o repositório:
-git clone https://github.com/<seu-usuario>/customer-success-analytics.git](https://github.com/seu-usuario/project_evolve.git
+git clone https://github.com/seu-usuario/project_evolve.git
 
 cd project_evolve
 

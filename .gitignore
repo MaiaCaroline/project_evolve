@@ -1,0 +1,30 @@
+# Ambientes virtuais
+.venv/
+venv/
+
+# Arquivos de Cache do Python
+__pycache__/
+*.pyc
+
+# Caches de Jupyter Notebook
+.ipynb_checkpoints/
+
+# Dados - NUNCA versionar dados brutos ou sensíveis
+*.csv
+*.json
+*.parquet
+
+# Modelos e outros artefatos salvos
+*.pkl
+*.joblib
+
+# Logs do MLflow
+mlruns/
+
+# Arquivos de configuração local com senhas (se aplicável)
+.env
+config.ini
+
+# Arquivos de sistema operacional
+.DS_Store
+Thumbs.db

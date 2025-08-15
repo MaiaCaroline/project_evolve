@@ -50,46 +50,46 @@ cd project_evolve
 
 # Criar e Ativar o Ambiente Virtual
 
-Dentro da pasta do projeto, crie o ambiente virtual:
+# Dentro da pasta do projeto, crie o ambiente virtual:
 
 python -m venv .venv
 
-Ative-o:
+# Ative-o:
 
 Windows: .\.venv\Scripts\Activate.ps1
 
 macOS/Linux: source .venv/bin/activate
 
 # Instale as dependências
-Crie o arquivo requirements.txt na raiz do projeto e cole todo o conteúdo que definimos anteriormente.
 
-Instale as bibliotecas:
+# Instale as bibliotecas:
 
 pip install -r requirements.txt
 
 
 # Criar a Estrutura de Diretórios
 
-Crie as pastas que irão organizar nosso projeto:
+# Crie as pastas que irão organizar nosso projeto:
 
 mkdir notebooks src data
 
 
 # Configurar o .gitignore
 
-Crie o arquivo .gitignore na raiz do projeto.
+#Crie o arquivo .gitignore na raiz do projeto.
 
-Cole o conteúdo que definimos, garantindo que dados, modelos, ambientes virtuais e caches sejam ignorados. 
+# Cole o conteúdo que definimos, garantindo que dados, modelos, ambientes virtuais e caches sejam ignorados. 
 
 
 # Commit 
 
-Agora, vamos salvar esta estrutura inicial no nosso histórico.
+# Agora, vamos salvar esta estrutura inicial no nosso histórico.
 
 git add .
 git commit -m "Initial commit: Configura estrutura do projeto, dependências e gitignore"
 git push origin main
-Checkpoint: Seu repositório no GitHub agora tem a estrutura de pastas, o requirements.txt e o .gitignore.
+
+# Checkpoint: Seu repositório no GitHub agora tem a estrutura de pastas, o requirements.txt e o .gitignore.
 
 # Execute o dashboard
 streamlit run dashboard_cliente_success.py
